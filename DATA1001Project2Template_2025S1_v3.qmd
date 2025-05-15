@@ -1,0 +1,161 @@
+---
+title: "Breast Cancer Patient"
+author: "SID 550713797"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+theme: architect
+---
+
+# Client Bio
+**Client**:
+[National Breast Cancer Foundation (NBCF)](https://nbcf.org.au/about/)
+
+![](National_Breast_Cancer_Foundation_Australia_Logo_2025.png){width="30%"}
+
+**Bio**:
+The National Breast Cancer Foundation is an Australian non-profit organisation dedicated in funding life-saving breast cancer research. NBCF has invested in innovative research to improve prevention, diagnosis, treatment of breast cancer patients, with the goal of achieving zero deaths from breast cancer by 2030. 
+
+
+# Recommendation
+To increase the predictability of cancer patients, NBCF should conduct analysis on the influence of demographic and stage variables on breast cancer outcomes. This can aid in identifying high-risk population and enable precise treatments while spreading awareness. Resulting in a likelihood in reducing breast cancer mortality. 
+
+# Evidence
+The data analysed in this research is sourced from SEER Breast Cancer Data (IEEEDataPort), contributed by JING TENG. The dataset involves 4024 female patients, including various features on their identity and cancer.
+
+```{r message=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(survival)
+library(survminer)
+
+raw_data = read.csv("breast_cancer.csv")
+
+#Convert Grade into integer format
+data = raw_data %>% mutate(Grade = case_when(
+str_detect(Grade, "1") ~ 1L,
+str_detect(Grade, "2") ~ 2L,
+str_detect(Grade, "3") ~ 3L,
+str_detect(Grade, regex("anaplastic; grade iv", ignore_case = TRUE)) ~ 4L
+))
+
+```
+
+## Survival Months by Age groups, Race, and Marital Status
+
+::: {.panel-tabset}
+
+## Age Group
+
+```{r}
+split_age = data %>% mutate(Age = case_when(
+  Age > 0 & Age <= 10 ~ "0~10",
+  Age > 10 & Age <= 20 ~ "10~20",
+  Age > 20 & Age <= 30 ~ "20~30",
+  Age > 30 & Age <= 40 ~ "30~40",
+  Age > 40 & Age <= 50 ~ "40~50",
+  Age > 50 & Age <= 60 ~ "50~60",
+  Age > 60 & Age <= 70 ~ "60~70",
+  Age > 70 & Age <= 80 ~ "70~80",
+  Age > 80 & Age <= 90 ~ "80~90",
+  Age > 90 & Age <= 100 ~ "90~100",
+  Age > 100 ~ ">100"
+))
+
+#Changes how the graph is colored
+#https://ggplot2.tidyverse.org/reference/aes_colour_fill_alpha.html
+
+ggplot(split_age, aes(x = Survival.Months, y = Age)) + 
+  labs(title = "Survival Months by Age Group", x ="Survival Months", y = "Age Group") +
+  geom_boxplot() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16)) +
+  theme_bw()
+```
+
+## Race
+
+```{r}
+ggplot(data, aes(x = Survival.Months, y = Race)) + 
+  labs(title = "Survival Months by Race", x = "Survival Months", y = "Race") +
+  geom_boxplot() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16)) +
+  theme_bw()
+```
+
+## Marital Status
+
+```{r}
+ggplot(data, aes(x = Survival.Months, y = Marital.Status)) + 
+  labs(title = "Survival Months by Marital Status", x = "Survival Months", y = "Marital Status") +
+  geom_boxplot() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16)) +
+  theme_bw()
+
+fivenum(filter(data, Marital.Status == "Separated")$Survival.Months)
+fivenum(filter(data, Marital.Status != "Separated")$Survival.Months)
+```
+:::
+
+By comparing the impacts of unique factors through boxplot, various patterns emerge that may hint at a relation between those features leading to fewer surviving. The most notable being the separated marital status have a lower survival month median at 67 compared to other 73, showcasing possibility of patterns in cancer patients. 
+
+```{r}
+surv_obj = Surv(time = data$Survival.Months, event = ifelse(data$Status == "Dead", 1, 0))
+fit = survfit(surv_obj ~ T.Stage, data = data)
+surv_df <- broom::tidy(fit)
+surv_df <- surv_df %>%
+mutate(T.Stage = str_remove(strata, "T Stage="))
+str(surv_df)
+
+ggplot(surv_df, aes(x = time, y = estimate, color = T.Stage)) +
+geom_step() +
+theme_minimal() +
+labs(title = "Survival Probability by Months",
+x = "Survival Months",
+y = "Survival Probability",
+color = "T Stage") +
+theme(legend.position = "right")
+
+```
+
+
+Max 400 words.
+
+Demonstrates "evidence-based decision making" - ie The Evidence for the Recommendation is clearly argued, using appropriate statistical analysis. The Evidence is suitable for a Client with good statistical literacy.
+
+Notes:
+
+1. You may use any appropriate form of analysis (eg numerical summaries, or graphical summaries, or modelling, or hypothesis testing), with care to relevant assumptions and interpretation.
+
+2. The Evidence does not have to be complicated but it must exactly align with and defend the recommendation.
+
+Insightfully discusses limitations of the analysis and/or the data. 
+
+Integrates other sources of information (e.g. a research paper, articles, or another dataset) to complement data analysis and make a convincing argument to the Client. Relates these sources of information to the present analysis. Clearly labels "External evidence" in acknowledgements section and references it in the report body.
+
+Limitations: 
+the data recorded has a cut-off data, any surviving patient's survival month is not accurate as they would live longer and have a higher num of month then stated in the dataset
+
+
+# Ethics Statement
+
+Max 50 words.
+
+There is a short statement explaining how 1 of the Shared Values and 1 of the Ethical Principles has been adhered to (see ISI: https://isi-web.org/declaration-professional-ethics).
+
+# AI usage statement
+
+Includes an AI usage statement covering: 
+
+1. Name and version of the AI tool.
+2. The date/s of use of the AI tool.
+3. A link to the entire prompt session used to inform report. (In chat gpt to navigate to the conversation you want to share, click the "Share" option, and then copy the generated link.)
+4. A short summary explaining how it was used and identifies which section(s) in the research paper containing the AI tool's outcome.
+
+If no AI is used in the generation of the report this must be made explicit.
+
+# Acknowledgements
+
+The Acknowledgment section includes a list of anything that informed the content in the Report. E.g. url of stack overflow, url of Ed post, date and details of drop-in session with tutor.
