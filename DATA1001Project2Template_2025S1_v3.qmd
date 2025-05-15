@@ -25,10 +25,9 @@ To increase the predictability of cancer patients, NBCF should conduct analysis 
 # Evidence
 The data analysed in this research is sourced from SEER Breast Cancer Data (IEEEDataPort), contributed by JING TENG. The dataset involves 4024 female patients, including various features on their identity and cancer.
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
-library(plotly)
 library(survival)
 library(survminer)
 
