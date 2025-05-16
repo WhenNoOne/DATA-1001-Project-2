@@ -1,5 +1,5 @@
 ---
-title: "Breast Cancer Patient"
+title: "Demographic Breast Cancer Predictions for Targeted Interventions"
 author: "SID 550713797"
 format: 
   html:
@@ -10,7 +10,8 @@ theme: architect
 ---
 
 # Client Bio
-**Client**:
+
+**Client:** 
 [National Breast Cancer Foundation (NBCF)](https://nbcf.org.au/about/)
 
 ![](National_Breast_Cancer_Foundation_Australia_Logo_2025.png){width="30%"}
@@ -23,13 +24,15 @@ The National Breast Cancer Foundation is an Australian non-profit organisation d
 To increase the predictability of breast cancer patients, NBCF should conduct analysis on the influence of demographic and stage variables on breast cancer outcomes. This can aid in identifying high-risk population and enable precise treatments while spreading awareness, resulting in a likelihood in reducing breast cancer mortality. 
 
 # Evidence
-The data analysed in this research is sourced from SEER Breast Cancer Data (IEEEDataPort), contributed by JING TENG. The dataset involves 4024 female patients, including various features on their identity and cancer.
+The data analysed in this research is sourced from SEER Breast Cancer Data (IEEEDataPort), contributed by JING TENG. The dataset involves 4024 female patients, including various features on their demographic and cancer status.
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(survival)
 library(survminer)
+library(ggiraph)
+library(plotly)
 
 raw_data = read.csv("breast_cancer.csv")
 
@@ -64,10 +67,6 @@ split_age = data %>% mutate(Age = case_when(
   Age > 100 ~ ">100"
 ))
 
-#Changes how the graph is colored
-#https://ggplot2.tidyverse.org/reference/aes_colour_fill_alpha.html
-#https://r-graph-gallery.com/23-add-colors-to-specific-groups-of-a-boxplot.html
-
 ggplot(split_age, aes(x = Survival.Months, y = Age, alpha = Age)) + 
   labs(title = "Survival Months by Age Group", x ="Survival Months", y = "Age Group") +
   geom_boxplot(fill="orange") +
@@ -78,7 +77,6 @@ ggplot(split_age, aes(x = Survival.Months, y = Age, alpha = Age)) +
 ## Race
 
 ```{r message=FALSE, warning=FALSE}
-#https://r-graph-gallery.com/42-colors-names.html
 
 ggplot(data, aes(x = Survival.Months, y = Race)) + 
   labs(title = "Survival Months by Race", x = "Survival Months", y = "Race") +
@@ -134,63 +132,72 @@ The survival curve displays 2 trends, a faster decline rate for age 31-40 and 60
 ```{r message=FALSE, warning=FALSE}
 #Note in the Excel Dataset provided by SEER, "Regional Nodes Positive" is misspelled as "Reginol Node Positive"
 
-#https://r-graph-gallery.com/2d-density-plot-with-ggplot2.html
-
 per_data = mutate(data, Regional.Node.Percentage = Reginol.Node.Positive/Regional.Node.Examined)
 
-ggplot(per_data, aes(x = Age, y = Regional.Node.Percentage)) +
+
+girafe(ggobj = ggplot(per_data, aes(x = Age, y = Regional.Node.Percentage)) +
+  geom_point_interactive(aes(tooltip = paste("Percentage: ", Regional.Node.Percentage))) +
+  xlim(0.5, 6) +
+  ylim(40, 110) +
   stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
   scale_fill_distiller(palette = 7, direction = 1) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   theme(legend.position= 'none') +
   geom_smooth(method = "lm", color = "blue") +
-  labs(x = "Age", y = "Cancer Cell Percentage", title = "Positive Regional Node Percentage againt Age") +
+  labs(x = "Age", y = "Positive Cancer Cell Percentage", title = "Positive Regional Node Percentage againt Age") +
   theme_minimal()
+)
 
 #lm(per_data$Regional.Node.Percentage ~ per_data$Age)
 
 ```
+Hover-over shows Percentage
 
-Max 400 words.
+Highlighted by the density graph of Positive Regional Node Percentage (Regional Node Positive / Regional Node Examined) against age, we can found hot spots occurring denser as age increase. Most apparent at around age 47 and reduce slightly as age increase. Research conducted in the United States shows - Women aged 40-49 show higher breast cancer incidence rates and significant annual increases compared to other age groups [[2]](#references). Proving that patient’s near age 50 grow more cancer cells than any other age group, marking them more prone to be being diagnosed with breast cancer. 
 
-Demonstrates "evidence-based decision making" - ie The Evidence for the Recommendation is clearly argued, using appropriate statistical analysis. The Evidence is suitable for a Client with good statistical literacy.
+# Limitations
 
-Notes:
+The dataset recorded is cut-off data, any surviving patient's survival month is not accurately recorded and may impact the calculations and graphs. 
 
-1. You may use any appropriate form of analysis (eg numerical summaries, or graphical summaries, or modelling, or hypothesis testing), with care to relevant assumptions and interpretation.
+It is possible that the cause of death may not be directly a result of breast cancer. This can cause false entries that ends abruptly.
 
-2. The Evidence does not have to be complicated but it must exactly align with and defend the recommendation.
+Few entries of age 21-30. No defined trend can be observed, and low numbers of data can produce unrepeatable experiments. To prevent this, no conclusions were made with this age group specifically. 
 
-Insightfully discusses limitations of the analysis and/or the data. 
+The sample is collected regionally, meaning that the data may not function in other countries due to difference in temperature, humidity and such. 
 
-Integrates other sources of information (e.g. a research paper, articles, or another dataset) to complement data analysis and make a convincing argument to the Client. Relates these sources of information to the present analysis. Clearly labels "External evidence" in acknowledgements section and references it in the report body.
 
-Limitations: 
-the data recorded has a cut-off data, any surviving patient's survival month is not accurate as they would live longer and have a higher num of month then stated in the dataset
-Death may not be caused by breast cancer directly
-Little data on age 21-30
-data is collected regionally
+# Conclusion
+
+This report highlights the predictability of breast cancer patients by analysing graphs and trends. National Breast Cancer Foundation should divert more resources into understanding influence of demographics including but not limited to age and race, supporting reduction of breast cancer mortality by identifying high-risk groups. 
 
 
 # Ethics Statement
 
-Max 50 words.
-
-There is a short statement explaining how 1 of the Shared Values and 1 of the Ethical Principles has been adhered to (see ISI: https://isi-web.org/declaration-professional-ethics).
+The project uses  Shared Value of professionalism, ensuring the accuracy and transparency of data analysis. Also following the Ethical Principle of responsibility by being aware to possible impacts that can affect society and being honest at explaining procedures, inline with the International Statistical Institute Declaration on Professional Ethics.
 
 # References
 
+[1] Chen, H.-l., Zhou, M.-q., Tian, W., Meng, K.-x., & He, H.-f. (2016). Effect of age on breast cancer patient prognoses: A population-based study using the SEER 18 database. PLOS ONE, 11(10), Article e0165409. https://doi.org/10.1371/journal.pone.0165409
+
+[2] Gail, M. H., Costantino, J. P., Bryant, J., Croyle, R., Freedman, L., Helzlsouer, K., Vogel, V., & Zelen, M. (2008). Weighing the risks and benefits of tamoxifen treatment for preventing breast cancer. JNCI: Journal of the National Cancer Institute, 100(22), 1643–1647. https://doi.org/10.1093/jnci/djn361
 
 # AI usage statement
 
-No AI is used in constructing this report. Most codes are written by hand, ed or from online resources acknowledgement in the [Other Resource](#other-resources). 
+No AI is used in constructing this report. 
 
 # Acknowledgements
 
-The Acknowledgment section includes a list of anything that informed the content in the Report. E.g. url of stack overflow, url of Ed post, date and details of drop-in session with tutor.
+Holtz, Y. (n.d.). 2D density plot with ggplot2. The R Graph Gallery. Retrieved May 16, 2025, from https://r-graph-gallery.com/2d-density-plot-with-ggplot2.html
 
-# Other Resources
+RDocumentation. (n.d.). geom_density_2d_interactive function – ggiraph package version 0.8.13. Retrieved May 16, 2025, from https://www.rdocumentation.org/packages/ggiraph/versions/0.8.13/topics/geom_density_2d_interactive
 
-https://r-graph-gallery.com/264-control-ggplot2-boxplot-colors.html
-https://www.nceas.ucsb.edu/sites/default/files/2020-04/colorPaletteCheatsheet.pdf
+Wickham, H. (n.d.). Aesthetics: colour, fill, alpha. ggplot2. Retrieved May 16, 2025, from https://ggplot2.tidyverse.org/reference/aes_colour_fill_alpha.html
+
+Holtz, Y. (n.d.). Add colors to specific groups of a boxplot. The R Graph Gallery. Retrieved May 16, 2025, from https://r-graph-gallery.com/23-add-colors-to-specific-groups-of-a-boxplot.html
+
+Holtz, Y. (n.d.). Colors names in R. The R Graph Gallery. Retrieved May 16, 2025, from https://r-graph-gallery.com/42-colors-names.html
+
+Holtz, Y. (n.d.). Control ggplot2 boxplot colors. The R Graph Gallery. Retrieved May 16, 2025, from https://r-graph-gallery.com/264-control-ggplot2-boxplot-colors.html
+
+NCEAS. (2020, April). Color palette cheatsheet. National Center for Ecological Analysis and Synthesis. Retrieved May 16, 2025, from https://www.nceas.ucsb.edu/sites/default/files/2020-04/colorPaletteCheatsheet.pdf
