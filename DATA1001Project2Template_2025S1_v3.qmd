@@ -20,7 +20,7 @@ The National Breast Cancer Foundation is an Australian non-profit organisation d
 
 
 # Recommendation
-To increase the predictability of cancer patients, NBCF should conduct analysis on the influence of demographic and stage variables on breast cancer outcomes. This can aid in identifying high-risk population and enable precise treatments while spreading awareness. Resulting in a likelihood in reducing breast cancer mortality. 
+To increase the predictability of breast cancer patients, NBCF should conduct analysis on the influence of demographic and stage variables on breast cancer outcomes. This can aid in identifying high-risk population and enable precise treatments while spreading awareness, resulting in a likelihood in reducing breast cancer mortality. 
 
 # Evidence
 The data analysed in this research is sourced from SEER Breast Cancer Data (IEEEDataPort), contributed by JING TENG. The dataset involves 4024 female patients, including various features on their identity and cancer.
@@ -43,82 +43,114 @@ str_detect(Grade, regex("anaplastic; grade iv", ignore_case = TRUE)) ~ 4L
 
 ```
 
-## Survival Months by Age groups, Race, and Marital Status
+# Survival Months by Age groups, Race, and Marital Status
 
 ::: {.panel-tabset}
 
 ## Age Group
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 split_age = data %>% mutate(Age = case_when(
-  Age > 0 & Age <= 10 ~ "0~10",
-  Age > 10 & Age <= 20 ~ "10~20",
-  Age > 20 & Age <= 30 ~ "20~30",
-  Age > 30 & Age <= 40 ~ "30~40",
-  Age > 40 & Age <= 50 ~ "40~50",
-  Age > 50 & Age <= 60 ~ "50~60",
-  Age > 60 & Age <= 70 ~ "60~70",
-  Age > 70 & Age <= 80 ~ "70~80",
-  Age > 80 & Age <= 90 ~ "80~90",
-  Age > 90 & Age <= 100 ~ "90~100",
+  Age > 0 & Age <= 10 ~ "1~10",
+  Age > 10 & Age <= 20 ~ "11~20",
+  Age > 20 & Age <= 30 ~ "21~30",
+  Age > 30 & Age <= 40 ~ "31~40",
+  Age > 40 & Age <= 50 ~ "41~50",
+  Age > 50 & Age <= 60 ~ "51~60",
+  Age > 60 & Age <= 70 ~ "61~70",
+  Age > 70 & Age <= 80 ~ "71~80",
+  Age > 80 & Age <= 90 ~ "81~90",
+  Age > 90 & Age <= 100 ~ "91~100",
   Age > 100 ~ ">100"
 ))
 
 #Changes how the graph is colored
 #https://ggplot2.tidyverse.org/reference/aes_colour_fill_alpha.html
+#https://r-graph-gallery.com/23-add-colors-to-specific-groups-of-a-boxplot.html
 
-ggplot(split_age, aes(x = Survival.Months, y = Age)) + 
+ggplot(split_age, aes(x = Survival.Months, y = Age, alpha = Age)) + 
   labs(title = "Survival Months by Age Group", x ="Survival Months", y = "Age Group") +
-  geom_boxplot() +
+  geom_boxplot(fill="orange") +
   theme(plot.title = element_text(hjust = 0.5, size = 16)) +
   theme_bw()
 ```
 
 ## Race
 
-```{r}
+```{r message=FALSE, warning=FALSE}
+#https://r-graph-gallery.com/42-colors-names.html
+
 ggplot(data, aes(x = Survival.Months, y = Race)) + 
   labs(title = "Survival Months by Race", x = "Survival Months", y = "Race") +
-  geom_boxplot() +
+  geom_boxplot(fill = c("azure4","cornsilk","azure1"), ) +
   theme(plot.title = element_text(hjust = 0.5, size = 16)) +
   theme_bw()
 ```
 
 ## Marital Status
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 ggplot(data, aes(x = Survival.Months, y = Marital.Status)) + 
   labs(title = "Survival Months by Marital Status", x = "Survival Months", y = "Marital Status") +
-  geom_boxplot() +
+  geom_boxplot(fill = "orchid3", alpha = c(0.2,0.4,0.6,0.8,1)) +
   theme(plot.title = element_text(hjust = 0.5, size = 16)) +
   theme_bw()
 
-fivenum(filter(data, Marital.Status == "Separated")$Survival.Months)
-fivenum(filter(data, Marital.Status != "Separated")$Survival.Months)
+#fivenum(filter(data, Marital.Status == "Separated")$Survival.Months)
+#fivenum(filter(data, Marital.Status != "Separated")$Survival.Months)
 ```
 :::
 
-By comparing the impacts of unique factors through boxplot, various patterns emerge that may hint at a relation between those features leading to fewer surviving. The most notable being the separated marital status have a lower survival month median at 67 compared to other 73, showcasing possibility of patterns in cancer patients. 
+Comparing the impacts of these factors through boxplot shows noticeable patterns hinting at possible relation between unique features leading to fewer survival. Most remarkable is the separated marital status, having a lower median at 67 compared to 73 averaged from other marital status. This result suggests some demographic groups would undoubtedly impact breast cancer mortality rate.
 
-```{r}
-surv_obj = Surv(time = data$Survival.Months, event = ifelse(data$Status == "Dead", 1, 0))
-fit = survfit(surv_obj ~ T.Stage, data = data)
+# Evaluate Survival Curves by Marital Status
+
+```{r message=FALSE, warning=FALSE}
+surv_obj = Surv(time = split_age$Survival.Months, event = ifelse(split_age$Status == "Dead", 1, 0))
+fit = survfit(surv_obj ~ Age, data = split_age)
 surv_df <- broom::tidy(fit)
 surv_df <- surv_df %>%
-mutate(T.Stage = str_remove(strata, "T Stage="))
-str(surv_df)
+mutate(Age = str_remove(strata, "Age ="))
+start_points <- surv_df %>%
+distinct(Age) %>%
+mutate(time = 0, estimate = 1, std.error = NA, conf.high = 1, conf.low = 1, n.event = 0, n.censor = 0, n.risk = max(surv_df$n.risk, na.rm = TRUE))
+surv_df_fixed <- bind_rows(start_points, surv_df) %>%
+arrange(Age, time)
 
-ggplot(surv_df, aes(x = time, y = estimate, color = T.Stage)) +
-geom_step() +
-theme_minimal() +
-labs(title = "Survival Probability by Months",
-x = "Survival Months",
-y = "Survival Probability",
-color = "T Stage") +
-theme(legend.position = "right")
+ggplot(surv_df_fixed, aes(x = time, y = estimate, color = Age)) +
+  geom_step(size = 0.6) +
+  theme_minimal() +
+  labs(title = "Survival Precentage over time by Age",
+    x = "Surviving Months",
+    y = "Percentage of Surviving Patients",
+    color = "Age") +
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0.6, 1.05), expand = c(0, 0))
+```
+The survival curve displays 2 trends, a faster decline rate for age 31-40 and 60-70, and a slower decline rate for 41-60. Similar study conducted in 2016 shows matching results – “Middle-aged breast cancer patients showed better survival than younger and older groups, except in advanced-stage disease” [[1]](#references). These replicable results implying the susceptibility of low and high aged breast cancer patients, showcasing mortality follow an age-based trend, and that possibility of other demographic factors contributing to fatality. 
+
+# Positive Regional Node Percentage VS Age
+
+```{r message=FALSE, warning=FALSE}
+#Note in the Excel Dataset provided by SEER, "Regional Nodes Positive" is misspelled as "Reginol Node Positive"
+
+#https://r-graph-gallery.com/2d-density-plot-with-ggplot2.html
+
+per_data = mutate(data, Regional.Node.Percentage = Reginol.Node.Positive/Regional.Node.Examined)
+
+ggplot(per_data, aes(x = Age, y = Regional.Node.Percentage)) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_fill_distiller(palette = 7, direction = 1) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(legend.position= 'none') +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(x = "Age", y = "Cancer Cell Percentage", title = "Positive Regional Node Percentage againt Age") +
+  theme_minimal()
+
+#lm(per_data$Regional.Node.Percentage ~ per_data$Age)
 
 ```
-
 
 Max 400 words.
 
@@ -136,6 +168,9 @@ Integrates other sources of information (e.g. a research paper, articles, or ano
 
 Limitations: 
 the data recorded has a cut-off data, any surviving patient's survival month is not accurate as they would live longer and have a higher num of month then stated in the dataset
+Death may not be caused by breast cancer directly
+Little data on age 21-30
+data is collected regionally
 
 
 # Ethics Statement
@@ -144,17 +179,18 @@ Max 50 words.
 
 There is a short statement explaining how 1 of the Shared Values and 1 of the Ethical Principles has been adhered to (see ISI: https://isi-web.org/declaration-professional-ethics).
 
+# References
+
+
 # AI usage statement
 
-Includes an AI usage statement covering: 
-
-1. Name and version of the AI tool.
-2. The date/s of use of the AI tool.
-3. A link to the entire prompt session used to inform report. (In chat gpt to navigate to the conversation you want to share, click the "Share" option, and then copy the generated link.)
-4. A short summary explaining how it was used and identifies which section(s) in the research paper containing the AI tool's outcome.
-
-If no AI is used in the generation of the report this must be made explicit.
+No AI is used in constructing this report. Most codes are written by hand, ed or from online resources acknowledgement in the [Other Resource](#other-resources). 
 
 # Acknowledgements
 
 The Acknowledgment section includes a list of anything that informed the content in the Report. E.g. url of stack overflow, url of Ed post, date and details of drop-in session with tutor.
+
+# Other Resources
+
+https://r-graph-gallery.com/264-control-ggplot2-boxplot-colors.html
+https://www.nceas.ucsb.edu/sites/default/files/2020-04/colorPaletteCheatsheet.pdf
